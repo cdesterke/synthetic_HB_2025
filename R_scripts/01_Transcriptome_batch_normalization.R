@@ -27,8 +27,6 @@ all(row.names(pheno)==colnames(all))
 data<-all[,row.names(pheno)]
 all(row.names(pheno)==colnames(data))
 
-
-
 ## combat batch correction
 
 library(sva)
@@ -36,9 +34,6 @@ batch = pheno$batch
 mod = model.matrix(~1+as.factor(group), data=pheno)
 edata = ComBat(dat=data,  batch=batch, mod=mod,par.prior=TRUE, prior.plots=TRUE)
 boxplot(edata)
-
-
-
 
 
 ## quantiles normalization
@@ -84,11 +79,12 @@ sig%>%filter(logFC>0)->pos
 process<-reducedf(pos,norm_edata,n=499)
 pcatrans(process,pheno,group="group",pal="Set1",alpha=1,names=F)
 bestheat(process,annot,scale="row",font=8,rownames=F)
-
+write.table(pos,file="pos499.tsv",row.names=T,sep="\t")
 #########################
 
 
 
 
 
-write.table(pos,file="pos499.tsv",row.names=T,sep="\t")
+
+
