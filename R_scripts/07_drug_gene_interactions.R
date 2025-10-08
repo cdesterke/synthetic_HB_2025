@@ -1,14 +1,16 @@
 library(dplyr)
-# Exemple de croisement
+# load drug gene interaction database
 interactions <- read.delim("interactions.tsv")
 categories <- read.delim("categories.tsv")
 
+# load HB essential genes
 net<-read.csv("gene_centrality_42.csv",h=T)
 genes_of_interest<-net$Node
 
 interactions_clean <- interactions %>%
   filter(!is.na(interaction_type))
 
+## select repressive drugs
 repressive_types <- c("inhibitor", "antagonist", "blocker", "suppressor",
                       "negative modulator", "inverse agonist", "cleavage",
                       "antisense oligonucleotide")
@@ -21,6 +23,7 @@ repressive_interactions <- interactions %>%
 write.csv(repressive_interactions,file="repressive_interactions.csv",row.names=F)
 
 
+## barplots
 library(dplyr)
 library(ggplot2)
 
@@ -32,8 +35,6 @@ gene_drug_summary <- repressive_interactions %>%
   arrange(desc(n))
 
 
-
-# Barplot
 ggplot(gene_drug_summary, aes(x = reorder(gene_name, n), y = n, fill = approval_status)) +
   geom_bar(stat = "identity") +
   coord_flip() +
@@ -47,31 +48,18 @@ ggplot(gene_drug_summary, aes(x = reorder(gene_name, n), y = n, fill = approval_
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 repressive_interactions %>%
   count(gene_name, interaction_type) %>% arrange(desc(n))
 
 
- <- repressive_interactions %>%
+repressive_interactions %>%
   mutate(interaction_score = as.numeric(as.character(interaction_score)))
 
 
 library(ggplot2)
 library(dplyr)
 
-# Données préparées
+# prepare data
 repressive_summary <- repressive_interactions %>%
   count(gene_name, interaction_type) %>%
   arrange(desc(n))
@@ -105,6 +93,7 @@ repressive_by_drug <- interactions %>%
 
 
 
+## network
 library(igraph)
 library(ggraph)
 library(tidyverse)
@@ -114,11 +103,11 @@ library(tidyverse)
 
 ### type of interactions
 
-# Créer les arêtes avec type et score
+
 edges <- repressive_interactions %>%
   select(from = drug_name, to = gene_name, type = interaction_type, weight = interaction_score)
 
-# Créer les nœuds avec type (gène ou médicament)
+
 nodes <- tibble(name = unique(c(edges$from, edges$to))) %>%
   mutate(node_type = if_else(name %in% edges$from, "Drug", "Gene"))
 
@@ -153,7 +142,7 @@ ggraph(g, layout = "fr") +
 
 
 
-## net approbation
+## network with drug approbation
 # Edges: from drug to gene
 edges <- repressive_interactions %>%
   select(from = drug_name, to = gene_name, type = interaction_type, weight = interaction_score)
@@ -194,7 +183,6 @@ ggraph(g, layout = "fr") +
 
 
 
-repressive_interactions %>%filter(gene_name=="ATP1A2")
 
 
 drug_type_summary <- repressive_interactions %>%
@@ -212,6 +200,7 @@ ggplot(drug_type_summary, aes(x = reorder(gene_name, n_drugs), y = n_drugs, fill
        y = "Number of Unique Drugs",
        fill = "Interaction Type") +
   theme_minimal(base_size = 12)
+
 
 
 
