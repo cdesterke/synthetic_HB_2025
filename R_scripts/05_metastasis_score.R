@@ -1,14 +1,8 @@
-
+## load data
+library(dplyr)
 pheno<-read.table("pheno_tumor.tsv",h=T,sep="\t")
-
 pheno%>%select(42:58)->annot
-
 data<-read.table("resultsScores.csv",h=T,sep=",",row.names=1)
-
-
-
-
-
 all<-merge(data,pheno,by="row.names")
 
 small<-all[,2:43]
@@ -20,16 +14,8 @@ df<-data[row.names(data)%in%input,]
 trans<-as.data.frame(t(df))
 
 all<-cbind(trans,pheno$group)
-geneset<-colnames(trans)
-library(multirocauc)
-all%>%dplyr::rename(group="pheno$group")->all
 
-all$group<-as.factor(all$group)
-roc.list<-roclist(all,geneset,outcome="group")
-roc.list
-
-rocplot(roc.list,line=1,title="Hepatoblastoma tumor status",police=8)
-
+## elasticnet tuning
 library(glmnet)
 y <- as.factor(all$metastasis)
 X<-as.matrix(trans)
@@ -147,20 +133,7 @@ equation<-paste(id,beta,sep="*",collapse=")+(")
 equation<-paste("(",equation,")",sep="")
 equation
 
-
-(MDK*0.086526467052398)+(EPS8L3*0.0473156316066736)+(PLK1*0.0387226254171079)+
-(PLCG1*0.0255997665905855)+(GSTP1*0.0235128091238549)+(PYCR1*0.0202066021506857)+
-(FOXM1*0.0184254570167794)+(SLC2A1*0.0113882786355533)+(APLN*0.00165711286195314)+
-(DLK1*0.000793685290516393)
-
-
- 
- 
-
-
- 
-
-
+## metastasis score computing
 all%>%mutate(meta10_score=(MDK*0.086526467052398)+(EPS8L3*0.0473156316066736)+(PLK1*0.0387226254171079)+
 (PLCG1*0.0255997665905855)+(GSTP1*0.0235128091238549)+(PYCR1*0.0202066021506857)+
 (FOXM1*0.0184254570167794)+(SLC2A1*0.0113882786355533)+(APLN*0.00165711286195314)+
@@ -168,7 +141,7 @@ all%>%mutate(meta10_score=(MDK*0.086526467052398)+(EPS8L3*0.0473156316066736)+(P
 
 
 
-
+## optimal threshold
 library(cutpointr)
 
 
@@ -201,29 +174,9 @@ ggplot(all,aes(metastasis,meta10_score))+geom_boxplot(outlier.shape=NA) +
   geom_point(aes(fill=factor(gender),size=1),shape = 21, alpha = 1, position = position_dodge2(width = .5))+
   theme_classic(base_size=16) +
   theme(legend.position = "right")+xlab("metastasis status")+ylab("metastasis score")+ggtitle("")
-
-
-
-
-
-
-
-
 write.csv(all,file="metastisis_Scores.csv",row.names=F)
 
 
-library(multirocauc)
-
-all$metastasis<-as.factor(all$metastasis)
-
-geneset<-row.names(pos)
-
-
-
-df<-all[,colnames(all)%in%geneset]
-all(row.names(df)==row.names(pheno))
-df$metastasis<-all$metastasis
-df$metastasis<-as.numeric(df$metastasis)
 
 ## multivariate model
 model<-glm(metastasis~meta10_score+histological_type+age_months+gender+pretext_stage,data=all,family="binomial")
@@ -251,11 +204,10 @@ library(broom)
 export <- tidy(model, exponentiate = TRUE, conf.int = TRUE)
 write.table(export,file="modelCI95metastasis.tsv",sep="\t",row.names=F)
 
+
+## expression heatmap
 genes_of_interest <- row.names(pos)
-
-
 inter<-intersect(genes_of_interest,colnames(all))
-
 all%>%select(Row.names,all_of(inter))->small
 row.names(small)<-small$Row.names
 small$Row.names<-NULL
@@ -263,25 +215,13 @@ small%>%dplyr::rename(PRKAA2="PRKAA2.y")->small
 trans<-as.data.frame(t(small))
 pretext_stage,metastasis
 all%>%select(metastasis,gender)->pheno
-
 row.names(pheno)<-colnames(trans)
 
 library(transpipe15)
-
 bestheat(trans,pheno,font=10,scale="row")
 
-pcatrans(trans,pheno,group="metastasis",alpha=1)
 
-
-df<-cbind(small,pheno)
-
-df$cairo<-as.factor(df$cairo)
-
-
-
-save(final,file="final.rda")
-
-
+## univariate analysis on confounding variables
 library(Publish)
 all<-read.csv("metastisis_Scores.csv",h=T)
 all$meta_cat<-as.factor(all$meta_cat)
@@ -291,6 +231,7 @@ results<-summary(u)
 write.table(results,file="PublishMeta.tsv",row.names=F,sep="\t")
 
 save(model,file="modelMeta.rda")
+
 
 
 
