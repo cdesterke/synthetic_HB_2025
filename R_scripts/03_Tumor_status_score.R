@@ -1,33 +1,24 @@
-list.files()
 
+## load normalized expression matrix
 load("quantile.rda")
 
+## prepare phenotype file
 pheno<-read.csv("pheno.csv",h=T,row.names=1)
 library(dplyr)
 pheno%>%filter(group!="cell.line")->pheno
-
 data<-norm_edata[,row.names(pheno)]
 
-
+## load list of 42 HB essential genes
 sig<-read.csv("gene_centrality_42.csv",h=T)
-
 input<-sig$Node
 
+## data merging
 df<-data[row.names(data)%in%input,]
-
 trans<-as.data.frame(t(df))
-
 all<-cbind(trans,pheno$group)
 geneset<-colnames(trans)
-library(multirocauc)
-all%>%dplyr::rename(group="pheno$group")->all
 
-all$group<-as.factor(all$group)
-roc.list<-roclist(all,geneset,outcome="group")
-roc.list
-
-rocplot(roc.list,line=1,title="Hepatoblastoma tumor status",police=8)
-
+## Elasticnet tuning on binomial outcome: tumor status
 library(glmnet)
 y <- as.factor(pheno$group)
 X<-as.matrix(trans)
@@ -93,7 +84,7 @@ ggplot(results, aes(x = log_lambda, y = auc, color = as.factor(alpha))) +
 
 
 
-### elastic net 0.7 alpha 
+### elastic net for optimal alpha
 
 fit <- glmnet(X, y, family = "binomial",alpha=0.7)
 plot(fit)
@@ -119,7 +110,7 @@ dim(pos)
 write.table(selcoef,file="selcoef.tsv",row.names=T,sep="\t")
 
 
-
+## barplot of genes with postive coefficients
 library(ggplot2)
 
 ggplot(data = pos, aes(x = reorder(gene, coef), y = coef, fill = gene)) +
@@ -137,26 +128,13 @@ ggplot(data = pos, aes(x = reorder(gene, coef), y = coef, fill = gene)) +
 
 
 
-
+## score computing
 id<-pos$gene
 beta<-pos$coef
 
 equation<-paste(id,beta,sep="*",collapse=")+(")
 equation<-paste("(",equation,")",sep="")
 equation
-
-
-(PLCG1*0.429872123332352)+(SORT1*0.295592045676785)+(PRKAA2*0.195893492874045)
-+(TSPAN5*0.195249942942498)+(ITGA6*0.195170798653957)+(PEG10*0.133784017006648)+
-(AXIN2*0.132526109118132)+(GJA5*0.131870524080608)+(EPCAM*0.126018841613278)+
-(PLK1*0.11118560539791)+(IGF2BP2*0.0452194527975264)+(LTBP2*0.0385934071695026)+
-(GPC3*0.0337724056330341)+(ITGA2*0.0301561058236772)+(LEF1*0.0204097432488604)+
-(NOTUM*0.00266070902875418)
- 
- 
-
-
- 
 
 
 all%>%mutate(en_score=(PLCG1*0.429872123332352)+(SORT1*0.295592045676785)+(PRKAA2*0.195893492874045)
@@ -168,7 +146,7 @@ all%>%mutate(en_score=(PLCG1*0.429872123332352)+(SORT1*0.295592045676785)+(PRKAA
 
 
 
-
+## optimal threshold
 library(cutpointr)
 
 
@@ -213,25 +191,17 @@ str(final)
 
 write.csv(final,file="resultsScores.csv",row.names=F)
 
-
+##indivivdual roc curves
 library(multirocauc)
-
 all$group<-as.factor(all$group)
-
 geneset<-row.names(pos)
-
-
 save(df,file="df.rda")
 df<-trans[,colnames(trans)%in%geneset]
 all(row.names(df)==row.names(pheno))
 df$group<-pheno$group
 df$group<-as.factor(df$group)
-
-
 roc.list<-roclist(df,geneset,outcome="group")
 roc.list
-
 rocplot(roc.list,line=1,title="Hepatoblastoma tumor status",police=12)
-
-
 save(final,file="final.rda")
+
