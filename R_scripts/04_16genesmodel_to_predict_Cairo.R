@@ -1,17 +1,9 @@
-
+## load data and merging
 pheno<-read.table("pheno_tumor.tsv",h=T,sep="\t")
-
-
-
 data<-read.table("resultsScores.csv",h=T,sep=",",row.names=1)
-
-
-
-
-
 all<-merge(data,pheno,bdatay="row.names")
 
-
+## select columns of interest
 library(dplyr)
 all%>%select(Row.names,en_score,en_cat,tissue.x,group.x,dataset,chic_risk_stratification,
 		clinical_course,ctnnbi_gene_alteration.ch1,metastasis,metastasis_code,age_months,event,
@@ -37,35 +29,27 @@ coef_predictor <- coef(model)["en_score"]
 odds_ratio <- exp(coef_predictor)
 odds_ratio
 
+## nomogram
 library(regplot)
 regplot(model, clickable=F, points=T, droplines=T,rank="sd") 
 
 
-
+## expression heatmap for selected genes
 genes_of_interest <- c("PLCG1", "SORT1", "PRKAA2.y", "TSPAN5", "ITGA6", "PEG10",
                        "AXIN2", "GJA5", "EPCAM", "PLK1", "IGF2BP2", "LTBP2",
                        "GPC3", "ITGA2", "LEF1", "NOTUM")
 
 
 inter<-intersect(genes_of_interest,colnames(all))
-
 all%>%select(Row.names,all_of(inter))->small
 row.names(small)<-small$Row.names
 small$Row.names<-NULL
 small%>%dplyr::rename(PRKAA2="PRKAA2.y")->small
 trans<-as.data.frame(t(small))
-pretext_stage,metastasis
-all%>%select(cairo,gender,)->pheno
-
+all%>%select(cairo,gender)->pheno
 row.names(pheno)<-colnames(trans)
-
 library(transpipe15)
-
 bestheat(trans,pheno,font=10,scale="row")
 
-pcatransellipses(trans,pheno,group="cairo",alpha=1,x=1,y=2,level=0.5)
 
 
-df<-cbind(small,pheno)
-
-df$cairo<-as.factor(df$cairo)
